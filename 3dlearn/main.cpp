@@ -1,7 +1,9 @@
 #include <d3d9.h>
+#include <d3dx9.h>
+#include <tchar.h>
 #pragma comment(lib,"winmm.lib")
 #pragma comment(lib,"d3d9.lib")
-//#pragma comment(lib,"d3dx9.lib")
+#pragma comment(lib,"d3dx9.lib")
 
 #define WINDOW_WIDTH	800
 #define WINDOW_HEIGHT	600
@@ -9,12 +11,16 @@
 #define SAFE_RELEASE(p) { if(p) { (p)->Release(); (p)=NULL; } }
 
 LPDIRECT3DDEVICE9       g_pd3dDevice = NULL;
+ID3DXFont*				g_pFont = NULL;
+float					g_FPS = 0.0f;
+wchar_t					g_strFPS[50];
 
 LRESULT CALLBACK	WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 HRESULT				Direct3D_Init(HWND hwnd);
 HRESULT				Objects_Init(HWND hwnd);
 VOID				Direct3D_Render(HWND hwnd);
 VOID				Direct3D_CleanUp();
+float				Get_FPS();
 
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
@@ -138,15 +144,65 @@ HRESULT Direct3D_Init(HWND hwnd)
 
 HRESULT Objects_Init(HWND hwnd)
 {
+	if (FAILED(D3DXCreateFont(g_pd3dDevice, 36, 0, 0, 1, false, DEFAULT_CHARSET,
+		OUT_DEFAULT_PRECIS, DEFAULT_QUALITY, 0, _T("微软雅黑"), &g_pFont)))
+		return E_FAIL;
+	srand(timeGetTime());
 	return S_OK;
 }
 
 void Direct3D_Render(HWND hwnd)
 {
+	g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+	RECT formatRect;
+	GetClientRect(hwnd, &formatRect);
 
+	g_pd3dDevice->BeginScene();
+
+	int charCount = swprintf_s(g_strFPS, 20, L"FPS:%0.3f", Get_FPS());
+	g_pFont->DrawText(NULL, g_strFPS, charCount, &formatRect, DT_TOP | DT_RIGHT, D3DCOLOR_XRGB(255, 39, 136));
+
+	formatRect.top = 100;//指定文字的纵坐标
+	g_pFont->DrawText(0, _T("【致我们永不熄灭的游戏开发梦想】"), -1, &formatRect, DT_CENTER,
+		D3DCOLOR_XRGB(68, 139, 256));
+
+	//在纵坐标250处，写第二段文字
+	formatRect.top = 250;
+	g_pFont->DrawText(0, _T("游戏开发的世界，我们来降服你了~！"), -1, &formatRect,
+		DT_CENTER, D3DCOLOR_XRGB(255, 255, 255));
+
+	//在纵坐标400处，写第三段文字
+	formatRect.top = 400;
+	g_pFont->DrawText(0, _T("闪闪惹人爱"), -1, &formatRect, DT_CENTER,
+		D3DCOLOR_XRGB(rand() % 256, rand() % 256, rand() % 256));
+
+
+	g_pd3dDevice->EndScene();
+
+	g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
 }
 
 void Direct3D_CleanUp()
 {
+	SAFE_RELEASE(g_pFont)
+	SAFE_RELEASE(g_pd3dDevice)
+}
 
+float Get_FPS()
+{
+	static float fps = 0;
+	static int frameCount = 0;
+	static float currentTime = 0.0f;
+	static float lastTime = 0.0f;
+
+	frameCount++;
+	currentTime = timeGetTime() * 0.001f;
+
+	if (currentTime-lastTime>1.0f)
+	{
+		fps = (float)frameCount / (currentTime - lastTime);
+		lastTime = currentTime;
+		frameCount = 0;
+	}
+	return fps;
 }
